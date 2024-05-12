@@ -2,12 +2,12 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #fff;
+    color: #515151;
     height: 100vh;
 }
 
 .formWrapper {
-    background: #282a36;
+    background: #515151;
     padding: 20px;
     border-radius: 10px;
     width: 400px;
@@ -48,7 +48,12 @@ footer a {
     font-size: 16px;
     font-weight: bold;
 }
-
+.topBar{
+    margin: 5px;
+    display: flex;
+    justify-content: space-between;
+    flex-direction: row;
+}
 .btn {
     border: none;
     padding: 10px;
@@ -91,7 +96,45 @@ footer a:hover {
 
 .mainWrap {
     display: grid;
-    grid-template-columns: 230px 1fr;
+    grid-template-columns: 150px 1fr;
+}
+.drawWrap{
+    display: grid;
+    grid-template-columns: 150px 1fr;
+    background-color: white;
+    width:40%;
+
+}
+
+
+.secondWraper{
+    display: flexbox;
+    flex-direction: row;
+    background-color: rgb(32, 32, 32);
+}
+.body{
+    overflow-x:none;
+}
+.editorWrap{
+    width:60vw;
+    height: 100%;
+
+}
+.cam{
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    width: 25vw;
+    
+}
+.cam1{
+    height: 50%;
+
+}
+
+.cam2{
+    height: 50%;
+ 
 }
 
 .aside {
@@ -103,6 +146,10 @@ footer a:hover {
 }
 .asideInner {
     flex: 1;
+}
+.cont{
+    display: flex;
+    flex-direction: row;
 }
 
 .clientsList {

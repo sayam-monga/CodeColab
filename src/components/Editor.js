@@ -2,7 +2,8 @@ import React, { useEffect, useRef } from 'react';
 import Codemirror from 'codemirror';
 import 'codemirror/lib/codemirror.css';
 import 'codemirror/theme/dracula.css';
-import 'codemirror/mode/javascript/javascript';
+import 'codemirror/mode/clike/clike'
+// import 'codemirror/mode/javascript/javascript';
 import 'codemirror/addon/edit/closetag';
 import 'codemirror/addon/edit/closebrackets';
 import ACTIONS from '../Actions';
@@ -14,8 +15,8 @@ const Editor = ({ socketRef, roomId, onCodeChange }) => {
             editorRef.current = Codemirror.fromTextArea(
                 document.getElementById('realtimeEditor'),
                 {
-                    mode: { name: 'javascript', json: true },
-                    theme: 'material-darker',
+                    mode:'text/x-c++src' ,
+                    theme: 'dracula',
                     autoCloseTags: true,
                     autoCloseBrackets: true,
                     lineNumbers: true,
@@ -51,7 +52,26 @@ const Editor = ({ socketRef, roomId, onCodeChange }) => {
         };
     }, [socketRef.current]);
 
-    return <textarea id="realtimeEditor"></textarea>;
+    return <div>
+
+
+    <div className="topBar">
+    <div class="col-6">
+    <label class="visually-hidden" for="inlineFormSelectPref">Preference</label>
+    <select class="form-select" id="inlineFormSelectPref">
+      <option selected>Choose...</option>
+      <option value="C++">C++</option>
+      <option value="Java">Java</option>
+      <option value="Python">Python</option>
+    </select>
+  </div>
+    <button type="submit" class="btn btn-success"><i class="bi bi-play-fill"></i> </button>
+    </div>
+    <textarea id="realtimeEditor"></textarea>
+
+    </div>
+    
+
 };
 
 export default Editor;

@@ -1,10 +1,12 @@
-import React, { useLayoutEffect, useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import rough from 'roughjs/bundled/rough.esm';
 import io from 'socket.io-client';
+import { initSocket } from '../socket';
+import ACTIONS from '../Actions';
 
 const generator = rough.generator();
 
-const WhiteBoard = () => {
+const WhiteBoard = ({ socketRef }) => {
   const [elements, setElements] = useState([]);
   const [action, setAction] = useState('none');
   const [tool, setTool] = useState('line');
@@ -12,27 +14,30 @@ const WhiteBoard = () => {
   const [startPosition, setStartPosition] = useState({ x: 0, y: 0 });
   const [currentPath, setCurrentPath] = useState([]);
   const canvasRef = useRef(null);
-  const socketRef = useRef(null);
+
+  const handleWhiteboardAction = (actionData) => {
+    const { type, data } = actionData;
+    if (type === 'create') {
+      setElements((prevElements) => [...prevElements, data]);
+    } else if (type === 'update') {
+      const updatedElements = elements.map((element) =>
+        element.id === data.id ? data : element
+      );
+      setElements(updatedElements);
+    }
+  };
 
   useEffect(() => {
-    socketRef.current = io('your-socket-server-url');
-
-    socketRef.current.on('whiteboard-action', (data) => {
-      handleSocketAction(data);
-    });
+    if (socketRef.current) {
+      socketRef.current.on('whiteboard-action', handleWhiteboardAction);
+    }
 
     return () => {
-      socketRef.current.disconnect();
+      if (socketRef.current) {
+        socketRef.current.off('whiteboard-action', handleWhiteboardAction);
+      }
     };
-  }, []);
-
-  useLayoutEffect(() => {
-    const canvas = canvasRef.current;
-    const context = canvas.getContext('2d');
-    context.clearRect(0, 0, canvas.width, canvas.height);
-    const roughCanvas = rough.canvas(canvas);
-    elements.forEach(({ roughElement }) => roughCanvas.draw(roughElement));
-  }, [elements]);
+  }, [socketRef.current, elements]);
 
   const createElement = (x1, y1, x2, y2, type, id) => {
     let roughElement;
@@ -57,54 +62,18 @@ const WhiteBoard = () => {
 
     return { x1, y1, x2, y2, roughElement, type, id };
   };
-
   const updatedElement = (x1, y1, x2, y2, type, id) => {
     const updatedElement = createElement(x1, y1, x2, y2, type, id);
-    const elementsCopy = [...elements];
-    elementsCopy[id] = updatedElement;
-    setElements(elementsCopy);
+    const updatedElements = elements.map((element) =>
+      element.id === id ? updatedElement : element
+    );
+    setElements(updatedElements);
 
     socketRef.current.emit('whiteboard-action', {
       type: 'update',
       data: updatedElement,
     });
   };
-
-  const getFreehandPath = (points) => {
-    if (points.length === 0) {
-      return '';
-    }
-    const path = `M ${points[0].x} ${points[0].y} ${points
-      .map((point) => `L ${point.x} ${point.y}`)
-      .join(' ')}`;
-    return path;
-  };
-  const getElementAtPosition = (x, y, elements) => {
-    for (let i = elements.length - 1; i >= 0; i--) {
-      const { x1, y1, x2, y2 } = elements[i];
-      if (
-        x >= Math.min(x1, x2) &&
-        x <= Math.max(x1, x2) &&
-        y >= Math.min(y1, y2) &&
-        y <= Math.max(y1, y2)
-      ) {
-        return elements[i];
-      }
-    }
-    return null;
-  };
-  const handleSocketAction = (data) => {
-    const { type, data: actionData } = data;
-
-    switch (type) {
-      case 'update':
-        setElements((prevElements) => [...prevElements, actionData]);
-        break;
-      default:
-        break;
-    }
-  };
-
   const handleMouseDown = (event) => {
     const { clientX, clientY } = event;
 
@@ -170,10 +139,35 @@ const WhiteBoard = () => {
     setSelectedElement(null);
   };
 
+  const getFreehandPath = (points) => {
+    if (points.length === 0) {
+      return '';
+    }
+    const path = `M ${points[0].x} ${points[0].y} ${points
+      .map((point) => `L ${point.x} ${point.y}`)
+      .join(' ')}`;
+    return path;
+  };
+
+  const getElementAtPosition = (x, y, elements) => {
+    for (let i = elements.length - 1; i >= 0; i--) {
+      const { x1, y1, x2, y2 } = elements[i];
+      if (
+        x >= Math.min(x1, x2) &&
+        x <= Math.max(x1, x2) &&
+        y >= Math.min(y1, y2) &&
+        y <= Math.max(y1, y2)
+      ) {
+        return elements[i];
+      }
+    }
+    return null;
+  };
+
   return (
     <div>
       <div style={{ position: 'fixed' }}>
-        <input
+      <input
           type='radio'
           id='selection'
           checked={tool === 'selection'}
