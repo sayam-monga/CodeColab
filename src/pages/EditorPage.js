@@ -10,6 +10,8 @@ import {
     Navigate,
     useParams,
 } from 'react-router-dom';
+import Webcam from 'react-webcam';
+import Draggable from 'react-draggable';
 
 const EditorPage = () => {
     const socketRef = useRef(null);
@@ -18,6 +20,7 @@ const EditorPage = () => {
     const { roomId } = useParams();
     const reactNavigator = useNavigate();
     const [clients, setClients] = useState([]);
+    const [webcams, setWebcams] = useState([]);
 
     useEffect(() => {
         const init = async () => {
@@ -45,6 +48,12 @@ const EditorPage = () => {
                         console.log(`${username} joined`);
                     }
                     setClients(clients);
+                    const updatedWebcams = clients.map(client => ({
+                        socketId: client.socketId,
+                        username: client.username,
+                        ref: React.createRef()
+                    }));
+                    setWebcams(updatedWebcams);
                     socketRef.current.emit(ACTIONS.SYNC_CODE, {
                         code: codeRef.current,
                         socketId,
@@ -62,6 +71,8 @@ const EditorPage = () => {
                             (client) => client.socketId !== socketId
                         );
                     });
+                    // Update the webcam feeds when a client disconnects
+                    setWebcams((prev) => prev.filter((webcam) => webcam.socketId !== socketId));
                 }
             );
         };
@@ -71,7 +82,7 @@ const EditorPage = () => {
             socketRef.current.off(ACTIONS.JOINED);
             socketRef.current.off(ACTIONS.DISCONNECTED);
         };
-    }, []);
+    }, [location.state, reactNavigator, roomId]);
 
     async function copyRoomId() {
         try {
@@ -95,7 +106,6 @@ const EditorPage = () => {
         <div className="mainWrap">
             <div className="aside">
                 <div className="asideInner">
-             
                     <h3>Connected</h3>
                     <div className="clientsList">
                         {clients.map((client) => (
@@ -106,8 +116,8 @@ const EditorPage = () => {
                         ))}
                     </div>
                 </div>
-                <button className="btn swtchBtn" onClick={()=>{
-                       reactNavigator(`/draw/${roomId}`);
+                <button className="btn swtchBtn" onClick={() => {
+                    reactNavigator(`/draw/${roomId}`);
                 }}>
                     Switch To WhiteBoard
                 </button>
@@ -126,6 +136,16 @@ const EditorPage = () => {
                         codeRef.current = code;
                     }}
                 />
+            </div>
+            <div className="webcamContainer">
+                {webcams.map((webcam) => (
+                    <Draggable key={webcam.socketId}>
+                        <div className="webcamWrap">
+                            <Webcam ref={webcam.ref} className="webcam" />
+                            <div className="webcamLabel">{webcam.username}</div>
+                        </div>
+                    </Draggable>
+                ))}
             </div>
         </div>
     );

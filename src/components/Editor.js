@@ -55,8 +55,8 @@ const Editor = ({ socketRef, roomId, onCodeChange }) => {
     return <div>
 
 
-    <div className="topBar">
-    <div class="col-6">
+    {/* <div className="topBar"> */}
+    {/* <div class="col-6">
     <label class="visually-hidden" for="inlineFormSelectPref">Preference</label>
     <select class="form-select" id="inlineFormSelectPref">
       <option selected>Choose...</option>
@@ -66,7 +66,7 @@ const Editor = ({ socketRef, roomId, onCodeChange }) => {
     </select>
   </div>
     <button type="submit" class="btn btn-success"><i class="bi bi-play-fill"></i> </button>
-    </div>
+    </div> */}
     <textarea id="realtimeEditor"></textarea>
 
     </div>

@@ -13,6 +13,58 @@
     width: 400px;
     max-width: 90%;
 }
+/* Add this to your CSS file (EditorPage.css) */
+.mainWrap {
+    display: flex;
+}
+
+.aside {
+    width: 20%;
+    padding: 10px;
+}
+.editorWrap {
+    width: 80%;
+    padding: 10px;
+    position: relative;
+}
+
+.webcamContainer {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    gap: 10px; /* Space between webcam feeds */
+}
+
+.webcamWrap {
+    width: 200px; /* Adjust as necessary */
+    height: 150px; /* Adjust as necessary */
+    border: 2px solid #ccc;
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: move;
+    position: relative;
+}
+
+.webcam {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* Ensures the video covers the container */
+}
+
+.webcamLabel {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    color: white;
+    text-align: center;
+    padding: 2px 0;
+    font-size: 12px;
+}
 
 footer {
     position: fixed;
