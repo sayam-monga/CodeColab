@@ -24,7 +24,6 @@ import {
   useSpring,
   useTransform,
 } from "framer-motion";
-import Link from "next/link";
 import { useRef, useState } from "react";
 
 export const FloatingList = ({
@@ -32,7 +31,7 @@ export const FloatingList = ({
   desktopClassName,
   mobileClassName,
 }: {
-  items: { title: string; icon: React.ReactNode; href: string }[];
+  items: { title: string; icon: React.ReactNode; onClick: () => void }[];
   desktopClassName?: string;
   mobileClassName?: string;
 }) => {
@@ -48,7 +47,7 @@ const FloatingListMobile = ({
   items,
   className,
 }: {
-  items: { title: string; icon: React.ReactNode; href: string }[];
+  items: { title: string; icon: React.ReactNode; onClick: () => void }[];
   className?: string;
 }) => {
   const [open, setOpen] = useState(false);
@@ -77,13 +76,12 @@ const FloatingListMobile = ({
                 }}
                 transition={{ delay: (items.length - 1 - idx) * 0.05 }}
               >
-                <Link
-                  href={item.href}
-                  key={item.title}
+                <button
+                  onClick={item.onClick}
                   className="h-10 w-10 rounded-full bg-gray-50 dark:bg-neutral-900 flex items-center justify-center"
                 >
                   <div className="h-4 w-4">{item.icon}</div>
-                </Link>
+                </button>
               </motion.div>
             ))}
           </motion.div>
@@ -98,6 +96,7 @@ const FloatingListMobile = ({
     </div>
   );
 };
+
 const users = [
   {
     id: 1,
@@ -128,11 +127,12 @@ const users = [
     avatar: "/placeholder.svg?height=32&width=32",
   },
 ];
+
 const FloatingListDesktop = ({
   items,
   className,
 }: {
-  items: { title: string; icon: React.ReactNode; href: string }[];
+  items: { title: string; icon: React.ReactNode; onClick: () => void }[];
   className?: string;
 }) => {
   let mouseX = useMotionValue(Infinity);
@@ -141,7 +141,7 @@ const FloatingListDesktop = ({
       onMouseMove={(e) => mouseX.set(e.pageX)}
       onMouseLeave={() => mouseX.set(Infinity)}
       className={cn(
-        "mx-auto hidden md:flex h-16 gap-4 items-end  rounded-2xl bg-gray-50 dark:bg-neutral-900 px-4 pb-3",
+        "mx-auto hidden md:flex h-16 gap-4 items-end rounded-2xl bg-gray-50 dark:bg-neutral-900 px-4 pb-3",
         className
       )}
     >
@@ -156,18 +156,17 @@ function IconContainer({
   mouseX,
   title,
   icon,
-  href,
+  onClick,
 }: {
   mouseX: MotionValue;
   title: string;
   icon: React.ReactNode;
-  href: string;
+  onClick: () => void;
 }) {
   let ref = useRef<HTMLDivElement>(null);
 
   let distance = useTransform(mouseX, (val) => {
     let bounds = ref.current?.getBoundingClientRect() ?? { x: 0, width: 0 };
-
     return val - bounds.x - bounds.width / 2;
   });
 
@@ -206,7 +205,7 @@ function IconContainer({
   const [hovered, setHovered] = useState(false);
   const [open, setOpen] = useState(false);
   return (
-    <Link href={href}>
+    <button onClick={onClick}>
       <motion.div
         ref={ref}
         style={{ width, height }}
@@ -263,6 +262,6 @@ function IconContainer({
           </SheetContent>
         </Sheet>
       </motion.div>
-    </Link>
+    </button>
   );
 }

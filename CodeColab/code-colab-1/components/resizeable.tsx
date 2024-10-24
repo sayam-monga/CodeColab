@@ -1,4 +1,5 @@
 "use client";
+import React from "react";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -7,74 +8,78 @@ import {
 import TextArea from "./textEditor";
 import { FloatingDock } from "./ui/floating-dock";
 import {
-  IconBrandGithub,
-  IconBrandX,
-  IconExchange,
-  IconHome,
-  IconNewSection,
   IconCopy,
-  IconXboxXFilled,
-  IconPlus,
   IconPlayerPlayFilled,
   IconUser,
+  IconXboxXFilled,
 } from "@tabler/icons-react";
 import { FloatingList } from "./ui/floating-list";
+import Terminal from "./terminal";
+import XTerminal from "./terminal";
 
-export function EditorLayout() {
+interface EditorLayoutProps {
+  roomId: string;
+}
+
+export function EditorLayout({ roomId }: EditorLayoutProps) {
+  // Links for various actions
   const links = [
     {
       title: "End Session",
       icon: (
-        <IconXboxXFilled className="h-full w-full  text-red-500 dark:text-red-500" />
+        <IconXboxXFilled className="h-full w-full text-red-500 dark:text-red-500" />
       ),
-      href: "#",
+      onClick: () => handleAction("End"),
     },
-
     {
-      title: "Copy Sesion ID",
+      title: "Copy Session ID",
       icon: (
         <IconCopy className="h-full w-full text-neutral-500 dark:text-neutral-300" />
       ),
-      href: "#",
+      onClick: () => handleAction("Copy"),
     },
-    // {
-    //   title: "Add Member",
-    //   icon: (
-    //     <IconPlus className="h-full w-full text-neutral-500 dark:text-neutral-300" />
-    //   ),
-    //   href: "#",
-    // },
   ];
-  function submitCode() {
-    console.log("submit code");
-  }
+
   const link1 = [
     {
       title: "Run Code",
       icon: (
-        <IconPlayerPlayFilled className="h-full w-full text-green-500 dark: text-green-500" />
+        <IconPlayerPlayFilled className="h-full w-full text-green-500 dark:text-green-500" />
       ),
-      href: "#",
-      onclick: { submitCode },
+      onClick: () => handleAction("Run"),
     },
   ];
+
   const link2 = [
     {
       title: "Connected Members",
       icon: (
         <IconUser className="h-full w-full text-neutral-500 dark:text-neutral-300" />
       ),
-      href: "#",
+      onClick: () => handleAction("Members"),
     },
   ];
+
+  // Generalized action handler
+  const handleAction = (action: string) => {
+    console.log(action);
+    // Implement action logic here
+  };
+
   return (
     <ResizablePanelGroup
       direction="horizontal"
-      className="max-w-screen  bg-black  "
+      className="max-w-screen min-h-screen bg-black"
     >
-      <ResizablePanel defaultSize={70} minSize={50} maxSize={70}>
-        <div className="relative flex h-screen items-center justify-center">
-          <TextArea />
+      <ResizablePanel defaultSize={15} maxSize={20}>
+        <div className="relative flex h-full items-center justify-center">
+          File System
+        </div>
+      </ResizablePanel>
+      <ResizableHandle withHandle />
+      <ResizablePanel defaultSize={50} minSize={30} maxSize={60}>
+        <div className="relative flex h-full items-center justify-center">
+          <TextArea roomId="174226be-1f8f-4fb8-8f94-b242301c259f" />
           <div className="absolute bottom-5 left-1/2 transform -translate-x-1/2 z-10">
             <div className="flex flex-row">
               <FloatingDock items={links} />
@@ -90,15 +95,19 @@ export function EditorLayout() {
           </div>
         </div>
       </ResizablePanel>
+
       <ResizableHandle withHandle />
-      <ResizablePanel defaultSize={50}>
+
+      <ResizablePanel defaultSize={30}>
         <ResizablePanelGroup direction="vertical">
-          <ResizablePanel defaultSize={50} minSize={50} maxSize={70}>
+          <ResizablePanel defaultSize={50}>
             <div className="flex h-full items-center justify-center p-6">
-              <span className="font-semibold">Output</span>
+              <XTerminal />
             </div>
           </ResizablePanel>
+
           <ResizableHandle withHandle />
+
           <ResizablePanel defaultSize={50}>
             <div className="flex h-full items-center justify-center p-6">
               <span className="font-semibold">Feed</span>
