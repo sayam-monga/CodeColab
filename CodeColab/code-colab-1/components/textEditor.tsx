@@ -5,8 +5,8 @@ import { io, Socket } from "socket.io-client";
 import * as monacoEditor from "monaco-editor";
 import { useSearchParams } from "next/navigation";
 
-// Connect to the Socket.io server
-const SOCKET_URL = "http://localhost:3001";
+// Update the socket URL to match your Glitch server
+const SOCKET_URL = "https://codecolab-wsserver.glitch.me";
 
 interface User {
   id: string;
@@ -49,19 +49,23 @@ const TextArea: React.FC<TextAreaProps> = ({
   const monacoRef = useRef<Monaco | null>(null);
   const decorationsRef = useRef<string[]>([]);
   const isUpdatingRef = useRef(false);
+  const debounceTimeoutRef = useRef<NodeJS.Timeout>();
 
-  // Use external socket if provided, otherwise create our own
+  // Update socket connection logic
   useEffect(() => {
     if (externalSocket) {
       socketRef.current = externalSocket;
+      setConnected(true);
       return;
     }
 
-    // Initialize socket connection
+    // Initialize socket connection with better error handling
     socketRef.current = io(SOCKET_URL, {
       reconnection: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
+      timeout: 10000,
+      transports: ["websocket", "polling"], // Allow fallback to polling
     });
 
     const socket = socketRef.current;
@@ -96,35 +100,45 @@ const TextArea: React.FC<TextAreaProps> = ({
     if (!socketRef.current) return;
     const socket = socketRef.current;
 
-    // Handle initial code when joining room
     socket.on("initial-code", (initialCode: string) => {
-      console.log("Received initial code:", initialCode);
-      if (initialCode && !code) {
-        isUpdatingRef.current = true;
-        setCode(initialCode);
-        if (onChange) onChange(initialCode);
-        isUpdatingRef.current = false;
+      if (initialCode && editorRef.current) {
+        const model = editorRef.current.getModel();
+        if (model) {
+          isUpdatingRef.current = true;
+          model.setValue(initialCode);
+          setCode(initialCode);
+          if (onChange) onChange(initialCode);
+          isUpdatingRef.current = false;
+        }
       }
     });
 
-    // Handle code updates from other users
     socket.on("code-update", (newCode: string) => {
-      console.log("Received code update:", newCode);
-      isUpdatingRef.current = true;
-      setCode(newCode);
-      if (onChange) onChange(newCode);
-      isUpdatingRef.current = false;
+      if (editorRef.current) {
+        const model = editorRef.current.getModel();
+        if (model) {
+          isUpdatingRef.current = true;
+          const position = editorRef.current.getPosition();
+
+          model.setValue(newCode);
+          setCode(newCode);
+          if (onChange) onChange(newCode);
+
+          if (position) {
+            editorRef.current.setPosition(position);
+          }
+          isUpdatingRef.current = false;
+        }
+      }
     });
 
     // Handle user join/leave events
-    socket.on("user-joined", ({ userCount: count, userName }) => {
+    socket.on("user-joined", ({ userCount: count }) => {
       setUserCount(count);
-      console.log(`${userName} joined the room`);
     });
 
-    socket.on("user-left", ({ userCount: count, userName }) => {
+    socket.on("user-left", ({ userCount: count }) => {
       setUserCount(count);
-      console.log(`${userName} left the room`);
     });
 
     // Handle users list updates
@@ -139,7 +153,34 @@ const TextArea: React.FC<TextAreaProps> = ({
     socket.on(
       "cursor-moved",
       ({ userId, userName, position }: CursorPosition) => {
-        updateRemoteCursor(userId, userName, position);
+        if (editorRef.current && monacoRef.current) {
+          const editor = editorRef.current;
+          const monaco = monacoRef.current;
+
+          // Clear old decorations
+          if (decorationsRef.current.length) {
+            editor.deltaDecorations(decorationsRef.current, []);
+          }
+
+          // Add new decoration
+          decorationsRef.current = editor.deltaDecorations(
+            [],
+            [
+              {
+                range: new monaco.Range(
+                  position.lineNumber,
+                  position.column,
+                  position.lineNumber,
+                  position.column + 1
+                ),
+                options: {
+                  className: "remote-cursor",
+                  hoverMessage: { value: `${userName}` },
+                },
+              },
+            ]
+          );
+        }
       }
     );
 
@@ -151,87 +192,48 @@ const TextArea: React.FC<TextAreaProps> = ({
       socket.off("users-update");
       socket.off("cursor-moved");
     };
-  }, [code, onChange, onUsersUpdate]);
+  }, [onChange]);
 
   // Handle editor mounting
   const handleEditorDidMount: OnMount = (editor, monaco) => {
     editorRef.current = editor;
     monacoRef.current = monaco;
 
-    // Set initial value if available
     if (value) {
-      editor.setValue(value);
+      const model = editor.getModel();
+      if (model) {
+        model.setValue(value);
+      }
     }
 
-    // Track cursor position changes
-    editor.onDidChangeCursorPosition((e) => {
-      if (socketRef.current) {
-        socketRef.current.emit("cursor-update", {
-          roomId,
-          position: {
-            lineNumber: e.position.lineNumber,
-            column: e.position.column,
-          },
-        });
-      }
-    });
-
-    // Handle content changes
     editor.onDidChangeModelContent((e) => {
       if (!isUpdatingRef.current) {
         const newValue = editor.getValue();
-        handleCodeChange(newValue);
+
+        if (debounceTimeoutRef.current) {
+          clearTimeout(debounceTimeoutRef.current);
+        }
+
+        debounceTimeoutRef.current = setTimeout(() => {
+          setCode(newValue);
+          if (onChange) onChange(newValue);
+          socketRef.current?.emit("code-change", {
+            roomId,
+            code: newValue,
+          });
+        }, 100);
       }
     });
-  };
 
-  // Update remote cursors
-  const updateRemoteCursor = (
-    userId: string,
-    userName: string,
-    position: CursorPosition["position"]
-  ) => {
-    if (!editorRef.current || !monacoRef.current) return;
-
-    const editor = editorRef.current;
-
-    // Remove old decorations
-    editor.deltaDecorations(decorationsRef.current, []);
-
-    // Create new decoration for remote cursor
-    const decorations = [
-      {
-        range: {
-          startLineNumber: position.lineNumber,
-          startColumn: position.column,
-          endLineNumber: position.lineNumber,
-          endColumn: position.column + 1,
-        },
-        options: {
-          className: "remote-cursor",
-          hoverMessage: { value: `${userName} (${userId})` },
-          zIndex: 1000,
-        },
-      },
-    ];
-
-    decorationsRef.current = editor.deltaDecorations([], decorations);
-  };
-
-  // Handle code changes
-  const handleCodeChange = (value: string | undefined) => {
-    if (!value || isUpdatingRef.current) return;
-
-    setCode(value);
-    if (onChange) onChange(value);
-
-    // Emit code changes to other users
-    if (socketRef.current) {
-      socketRef.current.emit("code-change", {
+    editor.onDidChangeCursorPosition((e) => {
+      socketRef.current?.emit("cursor-update", {
         roomId,
-        code: value,
+        position: {
+          lineNumber: e.position.lineNumber,
+          column: e.position.column,
+        },
       });
-    }
+    });
   };
 
   return (
@@ -243,7 +245,6 @@ const TextArea: React.FC<TextAreaProps> = ({
       </div>
       <Editor
         value={code}
-        onChange={handleCodeChange}
         onMount={handleEditorDidMount}
         height="100%"
         width="100%"

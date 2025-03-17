@@ -341,7 +341,7 @@ const DrawingBoard: React.FC<DrawingBoardProps> = ({
     }
   };
 
-  const redrawCanvas = (drawings: DrawingData[]) => {
+  const redrawCanvas = (drawings: DrawingData[] = []) => {
     const context = contextRef.current;
     if (!context || !canvasRef.current) return;
 
@@ -565,7 +565,7 @@ const DrawingBoard: React.FC<DrawingBoardProps> = ({
     }
 
     // Initialize socket connection
-    socketRef.current = io("http://localhost:3001", {
+    socketRef.current = io("https://codecolab-drawserver.glitch.me", {
       reconnection: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,

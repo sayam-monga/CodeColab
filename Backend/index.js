@@ -5,14 +5,37 @@ const { Server } = require("socket.io");
 const cors = require("cors");
 
 const app = express();
-app.use(cors());
+
+// Update CORS configuration to be more permissive
+app.use(
+  cors({
+    origin: "*", // Allow all origins in development
+    methods: ["GET", "POST", "OPTIONS"],
+    credentials: true,
+  })
+);
 
 const httpServer = createServer(app);
+
+// Update Socket.IO configuration
 const io = new Server(httpServer, {
   cors: {
-    origin: "http://localhost:3000",
-    methods: ["GET", "POST"],
+    origin: "*", // Allow all origins in development
+    methods: ["GET", "POST", "OPTIONS"],
+    credentials: true,
+    allowedHeaders: ["*"],
   },
+  pingTimeout: 60000, // Increase timeout
+  pingInterval: 25000,
+  transports: ["websocket", "polling"], // Allow both transports
+  allowEIO3: true, // Enable compatibility mode
+  maxHttpBufferSize: 1e8, // Increase buffer size
+  connectTimeout: 45000,
+});
+
+// Add basic health check route
+app.get("/health", (req, res) => {
+  res.send("Server is running");
 });
 
 // Store active rooms and their data
@@ -20,6 +43,10 @@ const rooms = new Map();
 
 io.on("connection", (socket) => {
   console.log(`User connected: ${socket.id}`);
+
+  socket.on("error", (error) => {
+    console.error("Socket error:", error);
+  });
 
   // Handle joining a room
   socket.on("join-room", ({ roomId, userName }) => {
@@ -31,17 +58,11 @@ io.on("connection", (socket) => {
       rooms.set(roomId, {
         code: "",
         users: new Map(),
-        drawingData: [],
-        pointers: new Map(),
       });
     }
 
     const room = rooms.get(roomId);
-    room.users.set(socket.id, {
-      id: socket.id,
-      name: userName,
-      joinedAt: new Date(),
-    });
+    room.users.set(socket.id, { id: socket.id, name: userName });
 
     // Send current code to new user
     socket.emit("initial-code", room.code);
@@ -50,23 +71,10 @@ io.on("connection", (socket) => {
     const usersList = Array.from(room.users.values());
     io.to(roomId).emit("users-update", usersList);
 
-    // Send current pointer positions to the new user
-    if (room.pointers) {
-      room.pointers.forEach((data, userId) => {
-        if (userId !== socket.id) {
-          socket.emit("user-pointer-move", {
-            userId,
-            userName: data.userName,
-            position: data.position,
-          });
-        }
-      });
-    }
-
     // Notify others about new user
     io.to(roomId).emit("user-joined", {
       userId: socket.id,
-      userName: userName,
+      userName,
       userCount: room.users.size,
     });
   });
@@ -75,9 +83,10 @@ io.on("connection", (socket) => {
   socket.on("code-change", ({ roomId, code }) => {
     if (rooms.has(roomId)) {
       const room = rooms.get(roomId);
-      room.code = code; // Update stored code
-      // Broadcast to all users in room except sender
-      socket.to(roomId).emit("code-update", code);
+      if (room.code !== code) {
+        room.code = code;
+        socket.to(roomId).emit("code-update", code);
+      }
     }
   });
 
@@ -175,7 +184,7 @@ io.on("connection", (socket) => {
 
         io.to(roomId).emit("user-left", {
           userId: socket.id,
-          userName: userName,
+          userName,
           userCount: room.users.size,
         });
 
@@ -186,6 +195,11 @@ io.on("connection", (socket) => {
       }
     });
   });
+});
+
+// Error handling for the server
+httpServer.on("error", (error) => {
+  console.error("Server error:", error);
 });
 
 const PORT = process.env.PORT || 3001;
