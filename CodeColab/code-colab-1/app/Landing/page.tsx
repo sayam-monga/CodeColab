@@ -1,3 +1,4 @@
+"use client";
 import { MaskContainer } from "@/components/ui/svg-mask-effect";
 
 export default function () {

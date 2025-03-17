@@ -65,3 +65,9 @@
   }
 }
 
+.remote-cursor {
+  background-color: #ff000050;
+  width: 2px !important;
+  margin-left: -1px;
+}
+

@@ -14,33 +14,50 @@ import { FlipWords } from "../ui/flip-words";
 import { v4 as uuidV4 } from "uuid";
 import { useRouter } from "next/navigation"; // Use next/navigation instead of next/router
 
+interface FormEvent extends React.FormEvent {
+  target: HTMLFormElement;
+}
+
+interface KeyboardEvent extends React.KeyboardEvent {
+  code: string;
+}
+
 export default function SignupForm() {
   const router = useRouter(); // This should now work correctly
   const words = ["Colab", "Together", "Explore", "Master"];
   const [roomId, setRoomId] = useState("");
+  const [userName, setUserName] = useState("");
+  const [error, setError] = useState("");
 
   // Create a new room and generate a unique ID
-  const createNewRoom = (e) => {
+  const createNewRoom = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
+    if (!userName.trim()) {
+      setError("Please enter your name");
+      return;
+    }
     const id = uuidV4();
     setRoomId(id);
-    router.push(`/Editor/${id}`); // Redirect to the new room
+    router.push(`/Editor/${id}?name=${encodeURIComponent(userName)}`);
   };
 
   // Join an existing room
   const joinRoom = () => {
     if (!roomId) {
-      console.log("No room ID provided!");
+      setError("Please enter a room ID");
+      return;
+    }
+    if (!userName.trim()) {
+      setError("Please enter your name");
       return;
     }
 
-    console.log("Navigating to room:", roomId);
-    // Redirect
-    router.push(`/Editor/${roomId}`);
+    setError("");
+    router.push(`/Editor/${roomId}?name=${encodeURIComponent(userName)}`);
   };
 
   // Handle Enter key press
-  const handleInputEnter = (e) => {
+  const handleInputEnter = (e: KeyboardEvent) => {
     if (e.code === "Enter") {
       joinRoom();
     }
@@ -58,16 +75,33 @@ export default function SignupForm() {
 
       <form className="my-8">
         <LabelInputContainer className="mb-4">
+          <Label htmlFor="name">Your Name</Label>
+          <Input
+            id="name"
+            placeholder="Enter your name"
+            value={userName}
+            onChange={(e) => setUserName(e.target.value)}
+            type="text"
+            required
+          />
+        </LabelInputContainer>
+
+        <LabelInputContainer className="mb-4">
           <Label htmlFor="code">Session Code</Label>
           <Input
             id="code"
             placeholder="7fa69203-1634-415b-bd0f-f2046ec10409"
-            onChange={(e) => setRoomId(e.target.value)}
             value={roomId}
+            onChange={(e) => setRoomId(e.target.value)}
             onKeyUp={handleInputEnter}
             type="text"
           />
         </LabelInputContainer>
+
+        {error && (
+          <p className="text-red-500 text-sm mb-4 text-center">{error}</p>
+        )}
+
         <Button
           onClick={joinRoom}
           type="button" // Ensure this button does not act as a form submit button
@@ -126,7 +160,15 @@ const BottomGradient = () => {
   );
 };
 
-const LabelInputContainer = ({ children, className }) => {
+interface LabelInputContainerProps {
+  children: React.ReactNode;
+  className?: string;
+}
+
+const LabelInputContainer: React.FC<LabelInputContainerProps> = ({
+  children,
+  className,
+}) => {
   return (
     <div className={cn("flex flex-col space-y-2 w-full", className)}>
       {children}

@@ -26,19 +26,37 @@ import {
 } from "framer-motion";
 import { useRef, useState } from "react";
 
+interface User {
+  id: string;
+  name: string;
+  joinedAt: Date;
+}
+
+interface FloatingListProps {
+  items: { title: string; icon: React.ReactNode; onClick: () => void }[];
+  desktopClassName?: string;
+  mobileClassName?: string;
+  connectedUsers?: User[];
+}
+
 export const FloatingList = ({
   items,
   desktopClassName,
   mobileClassName,
-}: {
-  items: { title: string; icon: React.ReactNode; onClick: () => void }[];
-  desktopClassName?: string;
-  mobileClassName?: string;
-}) => {
+  connectedUsers = [],
+}: FloatingListProps) => {
   return (
     <>
-      <FloatingListDesktop items={items} className={desktopClassName} />
-      <FloatingListMobile items={items} className={mobileClassName} />
+      <FloatingListDesktop
+        items={items}
+        className={desktopClassName}
+        connectedUsers={connectedUsers}
+      />
+      <FloatingListMobile
+        items={items}
+        className={mobileClassName}
+        connectedUsers={connectedUsers}
+      />
     </>
   );
 };
@@ -46,9 +64,11 @@ export const FloatingList = ({
 const FloatingListMobile = ({
   items,
   className,
+  connectedUsers = [],
 }: {
   items: { title: string; icon: React.ReactNode; onClick: () => void }[];
   className?: string;
+  connectedUsers?: User[];
 }) => {
   const [open, setOpen] = useState(false);
   return (
@@ -97,43 +117,14 @@ const FloatingListMobile = ({
   );
 };
 
-const users = [
-  {
-    id: 1,
-    name: "Alice Johnson",
-    avatar: "/placeholder.svg?height=32&width=32",
-  },
-  { id: 2, name: "Bob Smith", avatar: "/placeholder.svg?height=32&width=32" },
-  {
-    id: 3,
-    name: "Charlie Brown",
-    avatar: "/placeholder.svg?height=32&width=32",
-  },
-  { id: 4, name: "Diana Ross", avatar: "/placeholder.svg?height=32&width=32" },
-  {
-    id: 5,
-    name: "Edward Norton",
-    avatar: "/placeholder.svg?height=32&width=32",
-  },
-  { id: 6, name: "Fiona Apple", avatar: "/placeholder.svg?height=32&width=32" },
-  {
-    id: 7,
-    name: "George Clooney",
-    avatar: "/placeholder.svg?height=32&width=32",
-  },
-  {
-    id: 8,
-    name: "Helen Mirren",
-    avatar: "/placeholder.svg?height=32&width=32",
-  },
-];
-
 const FloatingListDesktop = ({
   items,
   className,
+  connectedUsers = [],
 }: {
   items: { title: string; icon: React.ReactNode; onClick: () => void }[];
   className?: string;
+  connectedUsers?: User[];
 }) => {
   let mouseX = useMotionValue(Infinity);
   return (
@@ -146,7 +137,12 @@ const FloatingListDesktop = ({
       )}
     >
       {items.map((item) => (
-        <IconContainer mouseX={mouseX} key={item.title} {...item} />
+        <IconContainer
+          mouseX={mouseX}
+          key={item.title}
+          {...item}
+          connectedUsers={connectedUsers}
+        />
       ))}
     </motion.div>
   );
@@ -157,11 +153,13 @@ function IconContainer({
   title,
   icon,
   onClick,
+  connectedUsers = [],
 }: {
   mouseX: MotionValue;
   title: string;
   icon: React.ReactNode;
   onClick: () => void;
+  connectedUsers?: User[];
 }) {
   let ref = useRef<HTMLDivElement>(null);
 
@@ -237,16 +235,23 @@ function IconContainer({
           <SheetContent>
             <SheetHeader>
               <SheetTitle>Connected Users</SheetTitle>
+              <SheetDescription>
+                {connectedUsers.length} user
+                {connectedUsers.length !== 1 ? "s" : ""} in the room
+              </SheetDescription>
             </SheetHeader>
             <ScrollArea className="h-[calc(100vh-8rem)] mt-4 pr-4">
               <ul className="space-y-2">
-                {users.map((user) => (
+                {connectedUsers.map((user) => (
                   <li
                     key={user.id}
                     className="flex items-center space-x-3 hover:bg-accent rounded-md p-2 transition-colors"
                   >
                     <Avatar>
-                      <AvatarImage src={user.avatar} alt={user.name} />
+                      <AvatarImage
+                        src={`https://avatar.vercel.sh/${user.id}`}
+                        alt={user.name}
+                      />
                       <AvatarFallback>
                         {user.name
                           .split(" ")
@@ -254,7 +259,14 @@ function IconContainer({
                           .join("")}
                       </AvatarFallback>
                     </Avatar>
-                    <span className="text-sm font-medium">{user.name}</span>
+                    <div>
+                      <span className="text-sm font-medium block">
+                        {user.name}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        Joined {new Date(user.joinedAt).toLocaleTimeString()}
+                      </span>
+                    </div>
                   </li>
                 ))}
               </ul>

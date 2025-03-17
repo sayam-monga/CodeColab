@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useState } from "react";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -7,21 +7,28 @@ import {
 } from "../components/ui/resizable";
 import TextArea from "./textEditor";
 import { FloatingDock } from "./ui/floating-dock";
-import {
-  IconCopy,
-  IconPlayerPlayFilled,
-  IconUser,
-  IconXboxXFilled,
-} from "@tabler/icons-react";
+import { IconCopy, IconUser, IconXboxXFilled } from "@tabler/icons-react";
 import { FloatingList } from "./ui/floating-list";
-import Terminal from "./terminal";
 import XTerminal from "./terminal";
+import { useToast } from "@/components/ui/use-toast";
+import DrawingBoard from "../components/DrawingBoard";
+
+interface User {
+  id: string;
+  name: string;
+  joinedAt: Date;
+}
 
 interface EditorLayoutProps {
   roomId: string;
+  userName: string;
 }
 
-export function EditorLayout({ roomId }: EditorLayoutProps) {
+export function EditorLayout({ roomId, userName }: EditorLayoutProps) {
+  const [code, setCode] = useState("");
+  const [connectedUsers, setConnectedUsers] = useState<User[]>([]);
+  const { toast } = useToast();
+
   // Links for various actions
   const links = [
     {
@@ -40,16 +47,6 @@ export function EditorLayout({ roomId }: EditorLayoutProps) {
     },
   ];
 
-  const link1 = [
-    {
-      title: "Run Code",
-      icon: (
-        <IconPlayerPlayFilled className="h-full w-full text-green-500 dark:text-green-500" />
-      ),
-      onClick: () => handleAction("Run"),
-    },
-  ];
-
   const link2 = [
     {
       title: "Connected Members",
@@ -61,9 +58,36 @@ export function EditorLayout({ roomId }: EditorLayoutProps) {
   ];
 
   // Generalized action handler
-  const handleAction = (action: string) => {
-    console.log(action);
-    // Implement action logic here
+  const handleAction = async (action: string) => {
+    if (action === "Copy") {
+      try {
+        await navigator.clipboard.writeText(roomId);
+        toast({
+          title: "Copied!",
+          description: "Room ID has been copied to clipboard",
+          duration: 2000,
+        });
+      } catch (err) {
+        toast({
+          title: "Failed to copy",
+          description: "Please try copying manually",
+          variant: "destructive",
+          duration: 2000,
+        });
+      }
+    } else if (action === "End") {
+      window.location.href = "/";
+    }
+  };
+
+  // Handle code updates
+  const handleCodeChange = (newCode: string) => {
+    setCode(newCode);
+  };
+
+  // Handle users updates
+  const handleUsersUpdate = (users: User[]) => {
+    setConnectedUsers(users);
   };
 
   return (
@@ -71,46 +95,34 @@ export function EditorLayout({ roomId }: EditorLayoutProps) {
       direction="horizontal"
       className="max-w-screen min-h-screen bg-black"
     >
-      <ResizablePanel defaultSize={15} maxSize={20}>
-        <div className="relative flex h-full items-center justify-center">
-          File System
-        </div>
-      </ResizablePanel>
-      <ResizableHandle withHandle />
       <ResizablePanel defaultSize={50} minSize={30} maxSize={60}>
         <div className="relative flex h-full items-center justify-center">
-          <TextArea roomId="174226be-1f8f-4fb8-8f94-b242301c259f" />
+          <TextArea
+            roomId={roomId}
+            value={code}
+            onChange={handleCodeChange}
+            onUsersUpdate={handleUsersUpdate}
+          />
           <div className="absolute bottom-5 left-1/2 transform -translate-x-1/2 z-10">
             <div className="flex flex-row">
               <FloatingDock items={links} />
-
               <div className="ml-2">
-                <FloatingList items={link2} />
-              </div>
-
-              <div className="submit ml-2">
-                <FloatingDock items={link1} />
+                <FloatingList items={link2} connectedUsers={connectedUsers} />
               </div>
             </div>
           </div>
         </div>
       </ResizablePanel>
-
       <ResizableHandle withHandle />
-
-      <ResizablePanel defaultSize={30}>
+      <ResizablePanel defaultSize={50} minSize={30}>
         <ResizablePanelGroup direction="vertical">
-          <ResizablePanel defaultSize={50}>
-            <div className="flex h-full items-center justify-center p-6">
-              <XTerminal />
-            </div>
+          <ResizablePanel defaultSize={50} minSize={40} maxSize={60}>
+            <XTerminal />
           </ResizablePanel>
-
           <ResizableHandle withHandle />
-
-          <ResizablePanel defaultSize={50}>
-            <div className="flex h-full items-center justify-center p-6">
-              <span className="font-semibold">Feed</span>
+          <ResizablePanel defaultSize={50} minSize={30} maxSize={60}>
+            <div className="h-full w-full">
+              <DrawingBoard roomId={roomId} userName={userName} />
             </div>
           </ResizablePanel>
         </ResizablePanelGroup>
